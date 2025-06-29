@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Professional To-Do List</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f7f9;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      background: white;
+      max-width: 800px;
+      width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+      padding: 2rem;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #333;
+    }
+
+    .form-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .form-group input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+
+    .form-group button {
+      padding: 10px 16px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      font-size: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .form-group button:hover {
+      background-color: #0056b3;
+    }
+
+    .task-section {
+      margin-top: 20px;
+    }
+
+    .task-section h3 {
+      color: #444;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 6px;
+    }
+
+    ul.task-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    ul.task-list li {
+      background: #f1f1f1;
+      margin-bottom: 10px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .task-details {
+      flex-grow: 1;
+    }
+
+    .task-details p {
+      margin: 4px 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .task-title {
+      font-weight: bold;
+      color: #222;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 5px;
+    }
+
+    .task-actions button {
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .complete {
+      color: green;
+    }
+
+    .delete {
+      color: red;
+    }
+
+    .completed-task {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    @media (max-width: 600px) {
+      .form-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🗂️ Professional To-Do List</h2>
+    <div class="form-group">
+      <input type="text" id="taskTitle" placeholder="Task title..." />
+      <input type="date" id="startDate" />
+      <input type="date" id="endDate" />
+      <button onclick="addTask()">Add Task</button>
+    </div>
+
+    <div class="task-section">
+      <h3>📅 Ongoing</h3>
+      <ul id="ongoingTasks" class="task-list"></ul>
+    </div>
+
+    <div class="task-section">
+      <h3>⏳ Pending</h3>
+      <ul id="pendingTasks" class="task-list"></ul>
+    </div>
+
+    <div class="task-section">
+      <h3>✅ Completed</h3>
+      <ul id="completedTasks" class="task-list"></ul>
+    </div>
+  </div>
+
+  <script>
+    const taskTitle = document.getElementById("taskTitle");
+    const startDate = document.getElementById("startDate");
+    const endDate = document.getElementById("endDate");
+
+    const ongoingList = document.getElementById("ongoingTasks");
+    const pendingList = document.getElementById("pendingTasks");
+    const completedList = document.getElementById("completedTasks");
+
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+    function renderTasks() {
+      ongoingList.innerHTML = "";
+      pendingList.innerHTML = "";
+      completedList.innerHTML = "";
+
+      const today = new Date().toISOString().split("T")[0];
+
+      tasks.forEach((task, index) => {
+        const li = document.createElement("li");
+        const details = document.createElement("div");
+        details.className = "task-details";
+
+        const title = document.createElement("div");
+        title.className = "task-title";
+        title.textContent = task.title;
+        if (task.completed) title.classList.add("completed-task");
+
+        const dateInfo = document.createElement("p");
+        dateInfo.textContent = `📅 ${task.start} to ${task.end}`;
+
+        details.appendChild(title);
+        details.appendChild(dateInfo);
+
+        const actions = document.createElement("div");
+        actions.className = "task-actions";
+
+        const completeBtn = document.createElement("button");
+        completeBtn.innerHTML = "✔️";
+        completeBtn.className = "complete";
+        completeBtn.onclick = () => toggleComplete(index);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.innerHTML = "🗑️";
+        deleteBtn.className = "delete";
+        deleteBtn.onclick = () => deleteTask(index);
+
+        actions.appendChild(completeBtn);
+        actions.appendChild(deleteBtn);
+
+        li.appendChild(details);
+        li.appendChild(actions);
+
+        if (task.completed) {
+          completedList.appendChild(li);
+        } else if (today < task.start) {
+          pendingList.appendChild(li);
+        } else if (today >= task.start && today <= task.end) {
+          ongoingList.appendChild(li);
+        } else {
+          ongoingList.appendChild(li); // fallback
+        }
+      });
+
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function addTask() {
+      const title = taskTitle.value.trim();
+      const start = startDate.value;
+      const end = endDate.value;
+
+      if (!title || !start || !end) {
+        alert("Please fill in all fields.");
+        return;
+      }
+
+      if (start > end) {
+        alert("End date cannot be before start date.");
+        return;
+      }
+
+      tasks.push({ title, start, end, completed: false });
+      renderTasks();
+
+      taskTitle.value = "";
+      startDate.value = "";
+      endDate.value = "";
+    }
+
+    function toggleComplete(index) {
+      tasks[index].completed = !tasks[index].completed;
+      renderTasks();
+    }
+
+    function deleteTask(index) {
+      if (confirm("Delete this task?")) {
+        tasks.splice(index, 1);
+        renderTasks();
+      }
+    }
+
+    // Initial render
+    renderTasks();
+  </script>
+</body>
+</html>
